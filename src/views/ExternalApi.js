@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { Button, Alert } from "reactstrap";
-import Highlight from "../components/Highlight";
+//import Highlight from "../components/Highlight"; // Este componente está roto.
 import { useAuth0, withAuthenticationRequired } from "@auth0/auth0-react";
 import { getConfig } from "../config";
 import Loading from "../components/Loading";
+import axios from 'axios';
 
 export const ExternalApiComponent = () => {
- // const { apiOrigin = "https://g-poc-service.herokuapp.com", audience } = getConfig();
-  const { apiOrigin = "http://127.0.0.1:8181", audience } = getConfig();
+ const { apiOrigin = "https://g-poc-gateway.herokuapp.com", audience } = getConfig();
+  // const { apiOrigin = "http://127.0.0.1:8181", audience } = getConfig();
 
-  const [state, setState] = useState({
+  const [dataApi, setDataApi] = useState({
     showResult: false,
     apiMessage: "",
     error: null,
@@ -25,13 +26,13 @@ export const ExternalApiComponent = () => {
   const handleConsent = async () => {
     try {
       await getAccessTokenWithPopup();
-      setState({
-        ...state,
+      setDataApi({
+        ...dataApi,
         error: null,
       });
     } catch (error) {
-      setState({
-        ...state,
+      setDataApi({
+        ...dataApi,
         error: error.error,
       });
     }
@@ -42,13 +43,13 @@ export const ExternalApiComponent = () => {
   const handleLoginAgain = async () => {
     try {
       await loginWithPopup();
-      setState({
-        ...state,
+      setDataApi({
+        ...dataApi,
         error: null,
       });
     } catch (error) {
-      setState({
-        ...state,
+      setDataApi({
+        ...dataApi,
         error: error.error,
       });
     }
@@ -62,23 +63,22 @@ export const ExternalApiComponent = () => {
       const token = await getAccessTokenSilently();
       const idToken = await getIdTokenClaims();
 
-      const response = await fetch(`${apiOrigin}/api/private`, {
+      const {data: response} = await axios.get(`${apiOrigin}/api/private`, {
         headers: {
           Authorization: `Bearer ${token}`,
           IdToken: `${idToken}`,
         },
       });
 
-      const responseData = await response.json();
-
-      setState({
-        ...state,
+      setDataApi({
         showResult: true,
-        apiMessage: responseData,
+        apiMessage: JSON.stringify(response, null, 2),
+        error: null,
       });
     } catch (error) {
-      setState({
-        ...state,
+      setDataApi({
+        showResult: false,
+        apiMessage: '',
         error: error.error,
       });
     }
@@ -90,23 +90,22 @@ export const ExternalApiComponent = () => {
       const token = await getAccessTokenSilently();
       const idToken = await getIdTokenClaims();
 
-      const response = await fetch(`${apiOrigin}/api/public`, {
+      const {data:response} = await axios.get(`${apiOrigin}/api/public`, {
         headers: {
           Authorization: `Bearer ${token}`,
           IdToken: `${idToken}`,
         },
       });
 
-      const responseData = await response.json();
-
-      setState({
-        ...state,
+      setDataApi({
         showResult: true,
-        apiMessage: responseData,
+        apiMessage: JSON.stringify(response, null, 2),
+        error: null
       });
     } catch (error) {
-      setState({
-        ...state,
+      setDataApi({
+        showResult: false,
+        apiMessage: '',
         error: error.error,
       });
     }
@@ -124,18 +123,20 @@ export const ExternalApiComponent = () => {
         body: JSON.stringify({ title: 'React POST Request Example' })
       };
 
+      // TODO we are gonna migrate this! :D
       const response = await fetch(`${apiOrigin}/api/user/interrogation`, requestOptions);
 
       const responseData = await response.json();
 
-      setState({
-        ...state,
+      setDataApi({
         showResult: true,
         apiMessage: responseData,
+        error: null,
       });
     } catch (error) {
-      setState({
-        ...state,
+      setDataApi({
+        showResult: false,
+        apiMessage: '',
         error: error.error,
       });
     }
@@ -146,24 +147,30 @@ export const ExternalApiComponent = () => {
 
       const token = await getAccessTokenSilently();
 
-      const requestOptions = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json',  Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: 'React POST Request Example' })
+      const requestBody = {
+        email: "messisefuedelbarza@test.com",
+        connection: "Username-Password-Authentication",
+        password: "password1.24Y",
+        role: "admin"
       };
+       
 
-      const response = await fetch(`${apiOrigin}/api/admin/user`, requestOptions);
+      const {data: response} = await axios.post(`${apiOrigin}/api/v0/users`, requestBody ,  {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      const responseData = await response.json();
-
-      setState({
-        ...state,
+      setDataApi({
         showResult: true,
-        apiMessage: responseData,
+        apiMessage: JSON.stringify(response, null, 2),
+        error: null,
       });
     } catch (error) {
-      setState({
-        ...state,
+      console.error('ERROR', error);
+      setDataApi({
+        showResult: false,
+        apiMessage: '',
         error: error.error,
       });
     }
@@ -183,14 +190,15 @@ export const ExternalApiComponent = () => {
 
       const responseData = await response.json();
 
-      setState({
-        ...state,
+      setDataApi({
+        ...dataApi,
         showResult: true,
         apiMessage: responseData,
       });
     } catch (error) {
-      setState({
-        ...state,
+      setDataApi({
+        showResult: false,
+        apiMessage: '',
         error: error.error,
       });
     }
@@ -201,10 +209,12 @@ export const ExternalApiComponent = () => {
     fn();
   };
 
+  console.log(dataApi);
+
   return (
       <>
         <div className="mb-5">
-          {state.error === "consent_required" && (
+          {dataApi.error === "consent_required" && (
               <Alert color="warning">
                 You need to{" "}
                 <a
@@ -217,7 +227,7 @@ export const ExternalApiComponent = () => {
               </Alert>
           )}
 
-          {state.error === "login_required" && (
+          {dataApi.error === "login_required" && (
               <Alert color="warning">
                 You need to{" "}
                 <a
@@ -293,14 +303,16 @@ export const ExternalApiComponent = () => {
         </div>
 
         <div className="result-block-container">
-          {state.showResult && (
+          {dataApi.showResult && (
               <div className="result-block" data-testid="api-result">
                 <h6 className="muted">Result</h6>
-                <Highlight>
-                  <span>{JSON.stringify(state.apiMessage, null, 2)}</span>
-                </Highlight>
+                  <span>{dataApi.apiMessage}</span>
               </div>
-          )}
+          )
+          }
+          { 
+            dataApi.error && (<div>Error => {dataApi.error}</div>)
+          }
         </div>
       </>
   );
