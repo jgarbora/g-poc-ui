@@ -5,6 +5,12 @@ import { useAuth0, withAuthenticationRequired } from "@auth0/auth0-react";
 import { getConfig } from "../config";
 import Loading from "../components/Loading";
 import axios from 'axios';
+import Select from 'react-select';
+
+const options = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'user', label: 'User' },
+];
 
 export const ExternalApiComponent = () => {
  const { apiOrigin = "https://g-poc-gateway.herokuapp.com", audience } = getConfig();
@@ -15,6 +21,11 @@ export const ExternalApiComponent = () => {
     apiMessage: "",
     error: null,
   });
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('');
+
 
   const {
     getAccessTokenSilently,
@@ -143,16 +154,26 @@ export const ExternalApiComponent = () => {
   };
 
   const callApiCreateUser = async () => {
+    if (email === '' || password === '' || role === '') {
+      setDataApi({
+        showResult: false,
+        apiMessage: '',
+        error: 'Todos los campos son obligatorios para la creacion de usuario.'
+      })
+      return;
+    }
     try {
 
       const token = await getAccessTokenSilently();
 
       const requestBody = {
-        email: "messisefuedelbarza@test.com",
+        email,
         connection: "Username-Password-Authentication",
-        password: "password1.24Y",
-        role: "admin"
+        password,
+        role: role.value
       };
+
+      console.log('request', requestBody);
        
 
       const {data: response} = await axios.post(`${apiOrigin}/api/v0/users`, requestBody ,  {
@@ -208,8 +229,6 @@ export const ExternalApiComponent = () => {
     e.preventDefault();
     fn();
   };
-
-  console.log(dataApi);
 
   return (
       <>
@@ -276,6 +295,32 @@ export const ExternalApiComponent = () => {
             >
               Create Interrogation (user)
             </Button>
+          </div>
+
+          <div className="mt-5">
+            <label>Username:
+              <input value={email} onChange={(event) => {
+                setEmail(event.target.value)
+                } }  
+              />
+            </label>
+          </div>
+          <div className="mt-5">
+            <label>Password:
+              <input type="password" value={password} onChange={(event) => {
+                setPassword(event.target.value)
+                } }  
+              />
+            </label>
+          </div>
+          <div>
+            <label>Rol:</label>
+            <Select options={options} onChange={
+              (data) => {
+                console.log(data);
+                setRole(data)
+              }
+            }/>
           </div>
 
           <div>
